@@ -1,5 +1,9 @@
 # Human Agent — Autonomous Visual Project Supervisor
 
+<p align="center">
+  <img src="assets/images/banner.svg" alt="Human Agent — Autonomous Visual Project Supervisor" width="100%"/>
+</p>
+
 > **An AI supervisor that watches your screen, controls your coding agent, tests your app, and ships your project — automatically.**
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
@@ -87,6 +91,10 @@ Final Report — readiness score + full coverage summary
 ---
 
 ## Architecture
+
+<p align="center">
+  <img src="assets/images/architecture.svg" alt="Human Agent Architecture Diagram" width="100%"/>
+</p>
 
 ```
 human-agent/
