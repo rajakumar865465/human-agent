@@ -1,0 +1,66 @@
+# Core AI / Agent Orchestration
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langgraph
+openai
+anthropic
+
+# Browser Automation / UI Testing
+playwright
+pytest
+pytest-playwright
+
+# Web / API Testing
+requests
+httpx
+aiohttp
+
+# App Server / API Layer
+fastapi
+uvicorn
+pydantic
+python-dotenv
+
+# Git / File Change Tracking
+GitPython
+watchdog
+
+# Docker / Isolated Execution
+docker
+
+# Logging / Reporting
+loguru
+rich
+structlog
+
+# Test Reports
+pytest-html
+allure-pytest
+
+# Screenshot / Image Handling
+pillow
+
+# Screen Capture and Desktop Automation (Visual Supervisor)
+mss
+pyautogui
+opencv-python
+
+# WebSocket support for dashboard
+websockets
+
+# CLI / Terminal UX
+typer
+click
+
+# YAML / Config Files
+pyyaml
+toml
+
+# Async Utilities
+anyio
+tenacity
+
+# Environment / System Utilities
+psutil

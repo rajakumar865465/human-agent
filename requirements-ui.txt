@@ -1,0 +1,20 @@
+# Dashboard + Visual Supervisor UI dependencies only.
+# Heavy AI/dev packages (tiktoken, playwright, greenlet, psutil, langchain)
+# are NOT included here. Use requirements.txt for full dev setup.
+
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+websockets
+mss
+pyautogui
+pillow
+opencv-python
+python-dotenv
+pydantic
+pyyaml
+loguru
+requests
+httpx
+openai

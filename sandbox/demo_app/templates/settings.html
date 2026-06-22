@@ -1,0 +1,31 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings - TaskFlow Lite</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff7ed; color: #7c2d12; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+    .card { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 12px 30px rgba(15,23,42,.08); }
+    input { width: 100%; margin: 10px 0 16px; padding: 14px 16px; border: 1px solid #fdba74; border-radius: 12px; }
+    button { border: 0; border-radius: 999px; padding: 14px 20px; background: #ea580c; color: white; cursor: pointer; }
+    .buttons { display: flex; gap: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Settings</h1>
+      <form method="get" action="/dashboard">
+        <label>Display name</label>
+        <input name="display_name" type="text" value="TaskFlow User">
+        <button type="submit">Save</button>
+      </form>
+      <div class="buttons">
+        <button onclick="window.location='/dashboard'">Back to dashboard</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

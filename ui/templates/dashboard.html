@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Visual Supervisor Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+  header { background: #1a1d2e; padding: 14px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2a2d3e; }
+  header h1 { font-size: 1.1rem; color: #7c9df0; }
+  .badge { padding: 3px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+  .badge-idle { background: #2a2d3e; color: #888; }
+  .badge-running { background: #1a4a2e; color: #4caf50; }
+  .badge-paused { background: #3a3a1a; color: #ffc107; }
+  .badge-stopped { background: #3a1a1a; color: #f44336; }
+  .badge-human_review_required { background: #4a1a1a; color: #ff6b6b; animation: pulse 1s infinite; }
+  .badge-completed { background: #1a3a4a; color: #2196f3; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  .layout { display: grid; grid-template-columns: 1fr 380px; gap: 0; height: calc(100vh - 53px); }
+  .left { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .right { background: #13151f; border-left: 1px solid #2a2d3e; padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+  .card { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 8px; padding: 14px; }
+  .card h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em; color: #555; margin-bottom: 8px; }
+  .card .val { font-size: 0.9rem; color: #c8d6ff; word-break: break-word; }
+
+  #screenshot-box { flex: 1; min-height: 260px; background: #0a0c14; border: 1px solid #2a2d3e; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  #screenshot-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #screenshot-box .no-ss { color: #444; font-size: 0.85rem; }
+
+  .human-review-alert { background: #3a0a0a; border: 1px solid #f44336; border-radius: 8px; padding: 14px; }
+  .human-review-alert h2 { color: #f44336; margin-bottom: 6px; font-size: 0.9rem; }
+
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .btn { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-green  { background: #2d6a3f; color: #fff; }
+  .btn-yellow { background: #7a6200; color: #fff; }
+  .btn-red    { background: #6a2020; color: #fff; }
+  .btn-blue   { background: #1a3a6a; color: #fff; }
+  .btn-gray   { background: #2a2d3e; color: #aaa; }
+  .btn-full   { grid-column: 1/-1; }
+
+  #prompt-row { display: flex; gap: 6px; }
+  #prompt-input { flex: 1; background: #0f1117; border: 1px solid #2a2d3e; color: #e0e0e0; border-radius: 6px; padding: 7px 10px; font-size: 0.8rem; }
+
+  .timeline { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .tl-entry { font-size: 0.72rem; color: #888; border-left: 2px solid #2a2d3e; padding-left: 8px; }
+  .tl-entry .tl-event { color: #7c9df0; }
+
+  .coverage-bar { background: #2a2d3e; border-radius: 99px; height: 8px; margin-top: 6px; overflow: hidden; }
+  .coverage-fill { background: #4caf50; height: 100%; border-radius: 99px; transition: width .4s; }
+
+  #vision-warning { background: #2a2014; border: 1px solid #7a5a00; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #ffc107; display: none; }
+  .vs-input { background: #0f1117; border: 1px solid #2a2d3e; color: #e0e0e0; border-radius: 6px; padding: 7px 10px; font-size: 0.8rem; width: 100%; }
+
+  .mode-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid #2a2d3e; cursor: pointer; font-size: 0.75rem; font-weight: 600; background: #1a1d2e; color: #666; transition: all .15s; }
+  .mode-btn:hover { border-color: #4a5080; color: #aaa; }
+  .mode-btn.active-observe { background: #1a2a3a; border-color: #4a8ab0; color: #7cc8f0; }
+  .mode-btn.active-human  { background: #2a2a10; border-color: #8a7a00; color: #ffc107; }
+  .mode-btn.active-auto   { background: #1a3a1a; border-color: #3a7a3a; color: #4caf50; }
+  .suggested-prompt-card { background: #1a1a0a; border: 1px solid #6a5a00; border-radius: 8px; padding: 14px; }
+  .suggested-prompt-card h2 { color: #ffc107; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+  .suggested-prompt-text { font-size: 0.75rem; color: #e0d070; max-height: 130px; overflow-y: auto; white-space: pre-wrap; background: #0f0f05; border-radius: 5px; padding: 8px; margin-bottom: 8px; border: 1px solid #3a3a00; }
+  .supervisor-status-row { display: flex; flex-direction: column; gap: 3px; font-size: .72rem; padding: 4px 0; }
+  .supervisor-status-row .sl { display: flex; gap: 6px; align-items: center; }
+  .supervisor-status-row .sl-label { color: #555; min-width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🤖 Visual Supervisor Dashboard</h1>
+  <span id="status-badge" class="badge badge-idle">idle</span>
+  <span id="header-task" style="font-size:.8rem;color:#666;margin-left:8px;"></span>
+  <span style="margin-left:auto;font-size:.72rem;color:#444;" id="clock"></span>
+</header>
+
+<div class="layout">
+  <!-- LEFT: screenshot + timeline -->
+  <div class="left">
+    <div id="vision-warning">
+      ⚠️ <span id="vision-warning-text">Vision model not configured. Add an OpenAI-compatible provider in Vision Model Settings.</span>
+    </div>
+
+    <div id="human-review-panel" class="human-review-alert" style="display:none;">
+      <h2>⚠️ Human Review Required</h2>
+      <div id="human-review-reason" style="font-size:.82rem;color:#e8a0a0;margin-bottom:8px;"></div>
+      <button class="btn btn-yellow" onclick="api('/api/mark-human-reviewed','POST')">Mark Reviewed &amp; Resume</button>
+    </div>
+
+    <div id="screenshot-box">
+      <span class="no-ss">No screenshot yet</span>
+    </div>
+
+    <div class="card">
+      <h2>Screen Analysis</h2>
+      <div id="analysis-summary" class="val" style="font-size:.82rem;color:#8fa;"></div>
+      <div id="analysis-activity" style="font-size:.75rem;color:#666;margin-top:4px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Timeline</h2>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: status + controls -->
+  <div class="right">
+
+    <!-- Supervisor Mode Selector -->
+    <div class="card">
+      <h2>Supervisor Mode</h2>
+      <div style="display:flex;gap:5px;margin-bottom:8px;">
+        <button id="mode-btn-observe" class="mode-btn" onclick="setMode('observe_only')">👁 Observe Only</button>
+        <button id="mode-btn-human"  class="mode-btn" onclick="setMode('human_review')">👤 Human Review</button>
+        <button id="mode-btn-auto"   class="mode-btn" onclick="setMode('auto_fix')">⚡ Auto Fix</button>
+      </div>
+      <div class="supervisor-status-row">
+        <div class="sl"><span class="sl-label">Auto Prompt:</span> <span id="auto-prompt-status" style="color:#f44336;font-weight:600;">OFF</span></div>
+        <div class="sl"><span class="sl-label">Waiting For:</span> <span id="waiting-for" style="color:#888;">—</span></div>
+        <div class="sl"><span class="sl-label">Last Action:</span> <span id="last-action-text" style="color:#888;">watching</span></div>
+      </div>
+    </div>
+
+    <!-- Suggested Prompt Panel (shown only when a prompt is pending approval) -->
+    <div id="suggested-prompt-panel" class="suggested-prompt-card" style="display:none;">
+      <h2>💡 Suggested Prompt — Awaiting Approval</h2>
+      <div id="suggested-prompt-text" class="suggested-prompt-text"></div>
+      <div id="prompt-edit-row" style="display:none;margin-bottom:8px;">
+        <textarea id="prompt-edit-textarea" style="width:100%;background:#0f0f05;border:1px solid #6a5a00;color:#e0d070;border-radius:5px;padding:7px;font-size:.75rem;min-height:80px;resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-green" onclick="approvePrompt()">✅ Send Prompt</button>
+        <button class="btn btn-blue"  id="edit-prompt-btn" onclick="toggleEditPrompt()">✏️ Edit</button>
+        <button class="btn btn-gray"  onclick="dismissPrompt()">✖ Cancel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Current Task</h2>
+      <div id="current-task" class="val">—</div>
+      <div id="current-stage" style="font-size:.75rem;color:#666;margin-top:4px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Requirement Coverage</h2>
+      <div id="coverage-text" class="val">—</div>
+      <div class="coverage-bar"><div class="coverage-fill" id="coverage-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Last Decision</h2>
+      <div id="last-decision" class="val" style="color:#ffc107;">—</div>
+    </div>
+
+    <div class="card">
+      <h2>Last Prompt Sent</h2>
+      <div id="last-prompt" class="val" style="font-size:.75rem;max-height:80px;overflow:auto;color:#aaa;"></div>
+    </div>
+
+    <!-- Vision Model Settings -->
+    <div class="card">
+      <h2>Vision Model Settings</h2>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <input class="vs-input" id="vs-provider" type="text" placeholder="Provider Name (e.g. OpenAI, OpenRouter, NVIDIA)" />
+        <input class="vs-input" id="vs-base-url" type="text" placeholder="Base URL (e.g. https://api.openai.com/v1)" />
+        <input class="vs-input" id="vs-api-key"  type="password" placeholder="API Key (leave blank to keep existing)" />
+        <div id="vs-key-hint" style="font-size:.7rem;color:#666;padding-left:2px;"></div>
+        <input class="vs-input" id="vs-model"    type="text" placeholder="Vision Model — e.g. gpt-4.1 · nvidia/cosmos3-nano-reasoner · qwen/qwen3.5-122b-a10b" />
+        <div style="font-size:.68rem;color:#666;padding-left:2px;line-height:1.4;">
+          Use a vision/multimodal model only. Text-only coding models (e.g. z-ai/glm-5.1) cannot analyze screenshots.
+        </div>
+      </div>
+      <div id="vs-status" style="font-size:.75rem;margin-top:6px;min-height:18px;word-break:break-word;"></div>
+      <div class="btn-grid" style="margin-top:8px;">
+        <button class="btn btn-green" onclick="saveVisionSettings()">💾 Save Vision Settings</button>
+        <button class="btn btn-blue"  onclick="testVisionModel()">🔍 Test Vision Model</button>
+        <button class="btn btn-gray btn-full" onclick="clearVisionSettings()">🗑 Clear Vision Settings</button>
+      </div>
+      <!-- Debug status line -->
+      <div id="vs-debug" style="margin-top:8px;padding:7px 9px;background:#080a10;border:1px solid #1e2133;border-radius:5px;font-size:.68rem;color:#555;line-height:2;">
+        Loading status…
+      </div>
+    </div>
+
+    <!-- Target App Settings -->
+    <div class="card">
+      <h2>Target App Settings</h2>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <input class="vs-input" id="app-url-input" type="text" placeholder="App URL (e.g. http://localhost:3000)" />
+        <input class="vs-input" id="app-cmd-input" type="text" placeholder="Start Command (e.g. npm run dev)" />
+        <input class="vs-input" id="app-workspace-input" type="text" placeholder="Working Directory (e.g. ./sandbox/demo_app)" />
+      </div>
+      <div class="btn-grid" style="margin-top:8px;">
+        <button class="btn btn-green btn-full" onclick="saveAppSettings()">💾 Save Target App Settings</button>
+      </div>
+      <div id="app-settings-status" style="font-size:.75rem;margin-top:6px;min-height:18px;word-break:break-word;"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card">
+      <h2>Controls</h2>
+      <!-- App status -->
+      <div id="app-status-bar" style="font-size:.72rem;padding:5px 2px 8px;color:#555;">
+        App status: <span id="app-status-text">checking…</span>
+      </div>
+      <div id="app-status-message" style="font-size:.72rem;color:#ffc107;display:none;margin-bottom:8px;padding:5px;background:#2a2a10;border-radius:4px;"></div>
+      <div class="btn-grid" style="margin-bottom:8px;">
+        <button class="btn btn-green btn-full" onclick="api('/api/start','POST')">▶ Start Visual Supervisor</button>
+        <button class="btn btn-yellow" onclick="api('/api/pause','POST')">⏸ Pause</button>
+        <button class="btn btn-blue"   onclick="api('/api/resume','POST')">▶ Resume</button>
+        <button class="btn btn-red btn-full" onclick="api('/api/stop','POST')">⏹ Stop</button>
+      </div>
+      <div class="btn-grid" style="margin-bottom:8px;">
+        <button class="btn btn-green" onclick="startTargetApp()">🚀 Start Target App</button>
+        <button class="btn btn-red" onclick="stopTargetApp()">⏹ Stop Target App</button>
+        <button class="btn btn-gray btn-full" onclick="checkAppStatus()">🌐 Check App Status</button>
+        <button class="btn btn-gray" onclick="api('/api/capture-now','POST')">📷 Capture Now</button>
+        <button class="btn btn-gray" onclick="analyzeNow()">🔍 Analyze Now</button>
+        <button class="btn btn-blue" onclick="api('/api/click-permission','POST')">✅ Click Safe Permission</button>
+        <button class="btn btn-blue" onclick="runValidation()">🔨 Run Validation Now</button>
+        <button class="btn btn-yellow" onclick="api('/api/mark-human-reviewed','POST')">👤 Mark Human Reviewed</button>
+        <button class="btn btn-gray"   onclick="api('/api/skip-action','POST')">⏭ Skip Current Action</button>
+        <button class="btn btn-gray"   onclick="api('/api/open-reports','GET')">📁 Open Reports Folder</button>
+        <button class="btn btn-gray"   onclick="api('/api/open-screenshots','GET')">🖼 Open Screenshots</button>
+        <button class="btn btn-gray btn-full" onclick="api('/api/reset','POST').then(()=>{pollState();pollCoverage();})">🔄 Reset State</button>
+      </div>
+      <div id="prompt-row">
+        <input id="prompt-input" type="text" placeholder="Type prompt to send to coding agent…" />
+        <button class="btn btn-blue" onclick="sendPrompt()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Clock ──────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// ── API helper ─────────────────────────────────────────────────────────
+async function api(url, method='GET', body=null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(url, opts);
+    const data = await r.json();
+    if (!data.ok && data.message) console.warn(data.message);
+    return data;
+  } catch(e) { console.error(e); }
+}
+
+async function sendPrompt() {
+  const text = document.getElementById('prompt-input').value.trim();
+  if (!text) return;
+  await api('/api/send-prompt', 'POST', { text });
+  document.getElementById('prompt-input').value = '';
+}
+
+// ── Mode selector ──────────────────────────────────────────────────────
+let _currentMode = 'human_review';
+
+async function setMode(mode) {
+  const data = await api('/api/supervisor-mode', 'POST', { mode });
+  if (data && data.ok) {
+    _currentMode = mode;
+    updateModeUI(mode);
+  }
+}
+
+function updateModeUI(mode) {
+  const btns = {
+    observe_only: document.getElementById('mode-btn-observe'),
+    human_review: document.getElementById('mode-btn-human'),
+    auto_fix:     document.getElementById('mode-btn-auto'),
+  };
+  const classes = {
+    observe_only: 'active-observe',
+    human_review: 'active-human',
+    auto_fix:     'active-auto',
+  };
+  Object.entries(btns).forEach(([m, btn]) => {
+    if (!btn) return;
+    btn.classList.remove('active-observe', 'active-human', 'active-auto');
+    if (m === mode) btn.classList.add(classes[m]);
+  });
+  const autoEl = document.getElementById('auto-prompt-status');
+  if (autoEl) {
+    autoEl.textContent = mode === 'auto_fix' ? 'ON (auto_fix)' : 'OFF';
+    autoEl.style.color = mode === 'auto_fix' ? '#4caf50' : '#f44336';
+  }
+}
+
+// ── Suggested prompt ───────────────────────────────────────────────────
+let _suggestedPromptText = '';
+
+async function approvePrompt() {
+  const editArea = document.getElementById('prompt-edit-textarea');
+  const text = (editArea && editArea.style.display !== 'none')
+    ? editArea.value.trim()
+    : _suggestedPromptText;
+  if (!text) return;
+  const data = await api('/api/approve-prompt', 'POST', { text });
+  if (data && data.ok) {
+    hideSuggestedPrompt();
+    pollState();
+  }
+}
+
+async function dismissPrompt() {
+  await api('/api/dismiss-prompt', 'POST');
+  hideSuggestedPrompt();
+}
+
+function toggleEditPrompt() {
+  const row = document.getElementById('prompt-edit-row');
+  const btn = document.getElementById('edit-prompt-btn');
+  const area = document.getElementById('prompt-edit-textarea');
+  if (!row) return;
+  if (row.style.display === 'none') {
+    area.value = _suggestedPromptText;
+    row.style.display = 'block';
+    btn.textContent = '✏️ Done';
+  } else {
+    row.style.display = 'none';
+    btn.textContent = '✏️ Edit';
+  }
+}
+
+function showSuggestedPrompt(text) {
+  _suggestedPromptText = text;
+  const panel = document.getElementById('suggested-prompt-panel');
+  const textEl = document.getElementById('suggested-prompt-text');
+  if (panel) panel.style.display = 'block';
+  if (textEl) textEl.textContent = text;
+}
+
+function hideSuggestedPrompt() {
+  _suggestedPromptText = '';
+  const panel = document.getElementById('suggested-prompt-panel');
+  if (panel) panel.style.display = 'none';
+  const row = document.getElementById('prompt-edit-row');
+  if (row) row.style.display = 'none';
+  const btn = document.getElementById('edit-prompt-btn');
+  if (btn) btn.textContent = '✏️ Edit';
+}
+
+// ── State polling ──────────────────────────────────────────────────────
+async function pollState() {
+  const state = await api('/api/state');
+  if (!state) return;
+
+  // Status badge
+  const badge = document.getElementById('status-badge');
+  badge.textContent = state.status || 'idle';
+  badge.className = 'badge badge-' + (state.status || 'idle');
+
+  document.getElementById('header-task').textContent = state.current_task ? '→ ' + state.current_task : '';
+  document.getElementById('current-task').textContent = state.current_task || '—';
+  document.getElementById('current-stage').textContent = state.current_stage || '';
+  document.getElementById('last-decision').textContent = state.last_decision || '—';
+  document.getElementById('last-prompt').textContent = state.last_prompt_sent || '—';
+
+  // Mode selector sync
+  const mode = state.supervisor_mode || 'human_review';
+  if (mode !== _currentMode) {
+    _currentMode = mode;
+    updateModeUI(mode);
+  }
+
+  // Waiting for / last action
+  const wf = document.getElementById('waiting-for');
+  const la = document.getElementById('last-action-text');
+  if (wf) wf.textContent = state.waiting_for || '—';
+  if (la) la.textContent = state.last_decision || 'watching';
+
+  // Suggested prompt panel
+  if (state.suggested_prompt) {
+    showSuggestedPrompt(state.suggested_prompt);
+  } else {
+    hideSuggestedPrompt();
+  }
+
+  // Human review alert
+  const hrPanel = document.getElementById('human-review-panel');
+  if (state.status === 'human_review_required') {
+    hrPanel.style.display = 'block';
+    document.getElementById('human-review-reason').textContent = state.human_review_reason || 'Risky action detected.';
+  } else {
+    hrPanel.style.display = 'none';
+  }
+
+  // Screen analysis
+  const analysis = state.last_screen_analysis || {};
+  const summaryEl = document.getElementById('analysis-summary');
+  const activityEl = document.getElementById('analysis-activity');
+  const visionWarn = document.getElementById('vision-warning');
+  const visionWarnText = document.getElementById('vision-warning-text');
+  if (analysis.summary) {
+    summaryEl.textContent = analysis.summary;
+    const s = analysis.summary.toLowerCase();
+    if (!visionHasApiKey) {
+      visionWarnText.textContent = 'Vision model not configured. Add an OpenAI-compatible provider in Vision Model Settings.';
+      visionWarn.style.display = 'block';
+    } else if (s.includes('unavailable')) {
+      visionWarnText.textContent = 'Vision model configured but not working. Please test your Base URL, API key, and model.';
+      visionWarn.style.display = 'block';
+    } else {
+      visionWarn.style.display = 'none';
+    }
+    activityEl.textContent = analysis.current_activity
+      ? `Activity: ${analysis.current_activity}  |  App: ${analysis.active_app || '?'}`
+      : '';
+  }
+}
+
+// ── Screenshot polling ─────────────────────────────────────────────────
+async function pollScreenshot() {
+  const data = await api('/api/screenshot');
+  if (!data) return;
+  const box = document.getElementById('screenshot-box');
+  if (data.available && data.base64) {
+    box.innerHTML = `<img src="data:image/png;base64,${data.base64}" alt="screen"/>`;
+  } else {
+    box.innerHTML = '<span class="no-ss">No screenshot available</span>';
+  }
+}
+
+// ── Timeline polling ───────────────────────────────────────────────────
+async function pollTimeline() {
+  const data = await api('/api/timeline?limit=30');
+  if (!data || !data.events) return;
+  const container = document.getElementById('timeline');
+  container.innerHTML = '';
+  [...data.events].reverse().forEach(ev => {
+    const div = document.createElement('div');
+    div.className = 'tl-entry';
+    const t = ev.ts ? new Date(ev.ts).toLocaleTimeString() : '';
+    div.innerHTML = `<span class="tl-event">${ev.event}</span> <span style="color:#444">${t}</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ── WebSocket for live updates ─────────────────────────────────────────
+function connectWS() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = (e) => {
+    try {
+      const state = JSON.parse(e.data);
+      // Update screenshot if present
+      if (state.screenshot_b64) {
+        document.getElementById('screenshot-box').innerHTML =
+          `<img src="data:image/png;base64,${state.screenshot_b64}" alt="screen"/>`;
+      }
+    } catch(e2) {}
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+// ── Vision Model Settings ──────────────────────────────────────────────
+async function loadVisionSettings() {
+  const data = await api('/api/vision-settings');
+  if (!data) return;
+  document.getElementById('vs-provider').value = data.provider_name || '';
+  document.getElementById('vs-base-url').value  = data.base_url     || '';
+  document.getElementById('vs-model').value      = data.vision_model || '';
+  visionHasApiKey = data.has_api_key || false;
+  const hint = document.getElementById('vs-key-hint');
+  const vw = document.getElementById('vision-warning');
+  const vwText = document.getElementById('vision-warning-text');
+  if (visionHasApiKey) {
+    hint.textContent = 'Saved key: ' + data.api_key_masked;
+    hint.style.color = '#4caf50';
+    vw.style.display = 'none';
+  } else {
+    hint.textContent = 'No API key saved';
+    hint.style.color = '#666';
+    vwText.textContent = 'Vision model not configured. Add an OpenAI-compatible provider in Vision Model Settings.';
+    vw.style.display = 'block';
+  }
+  loadVisionStatus();
+}
+
+async function loadVisionStatus() {
+  const data = await api('/api/vision-status');
+  const el = document.getElementById('vs-debug');
+  if (!data) { el.textContent = 'Status unavailable'; return; }
+  const keyColor   = data.has_api_key  ? '#4caf50' : '#f44336';
+  const urlColor   = data.has_base_url ? '#4caf50' : '#888';
+  const modelColor = data.model        ? '#7c9df0' : '#f44336';
+  const testResult = data.vision_test_result || 'not_tested';
+  const testColor  = testResult === 'connected' ? '#4caf50' : testResult === 'not_tested' ? '#555' : '#f44336';
+  const testLabel  = testResult === 'connected' ? 'connected' : testResult === 'not_tested' ? 'not tested' : 'failed';
+  el.innerHTML =
+    `<span style="color:#666">Provider:</span> <span style="color:#aaa">${data.provider || '—'}</span> &nbsp;|&nbsp; ` +
+    `<span style="color:#666">Base URL:</span> <span style="color:${urlColor}">${data.has_base_url ? 'loaded' : 'no'}</span> &nbsp;|&nbsp; ` +
+    `<span style="color:#666">API Key:</span> <span style="color:${keyColor}">${data.has_api_key ? data.api_key_masked : 'missing'}</span> &nbsp;|&nbsp; ` +
+    `<span style="color:#666">Model:</span> <span style="color:${modelColor}">${data.model || 'not set'}</span> &nbsp;|&nbsp; ` +
+    `<span style="color:#666">Vision Test:</span> <span style="color:${testColor}">${testLabel}</span>`;
+}
+
+async function analyzeNow() {
+  const data = await api('/api/analyze-now', 'POST');
+  if (data && data.ok) {
+    // Show result immediately without waiting for next poll cycle
+    pollState();
+  }
+}
+
+async function saveVisionSettings() {
+  const body = {
+    provider_name: document.getElementById('vs-provider').value.trim(),
+    base_url:      document.getElementById('vs-base-url').value.trim(),
+    vision_model:  document.getElementById('vs-model').value.trim(),
+  };
+  const keyVal = document.getElementById('vs-api-key').value.trim();
+  if (keyVal) body.api_key = keyVal;
+  const st = document.getElementById('vs-status');
+  const data = await api('/api/vision-settings', 'POST', body);
+  if (data && data.ok) {
+    st.textContent = '✓ Settings saved.';
+    st.style.color = '#4caf50';
+    document.getElementById('vs-api-key').value = '';
+    await loadVisionSettings();  // refreshes hint, debug line, visionHasApiKey
+    await pollState();           // shows "Vision config saved…" in Screen Analysis immediately
+  } else {
+    st.textContent = '✗ Save failed.';
+    st.style.color = '#f44336';
+  }
+}
+
+async function testVisionModel() {
+  const st = document.getElementById('vs-status');
+  st.innerHTML = 'Testing… (3 stages)';
+  st.style.color = '#ffc107';
+  const data = await api('/api/vision-settings/test', 'POST');
+  if (!data) { st.textContent = '✗ No response from server.'; st.style.color = '#f44336'; return; }
+
+  const tick = v => v ? '<span style="color:#4caf50">✓</span>' : '<span style="color:#f44336">✗</span>';
+  const stageHtml =
+    `${tick(data.api_connected)} API&nbsp; ${tick(data.image_supported)} Image&nbsp; ${tick(data.analysis_working)} Analysis`;
+
+  if (data.ok) {
+    st.innerHTML = stageHtml + ' — ' + data.message;
+    st.style.color = '#4caf50';
+    await pollState();       // shows "Vision model active" in Screen Analysis immediately
+    await loadVisionStatus();
+  } else {
+    st.innerHTML = stageHtml + '<br><span style="color:#f44336">✗ ' + (data.message || 'Test failed.') + '</span>';
+    st.style.color = '#e0e0e0';
+    await loadVisionStatus();
+  }
+}
+
+async function clearVisionSettings() {
+  const st = document.getElementById('vs-status');
+  const data = await api('/api/vision-settings/clear', 'POST');
+  if (data && data.ok) {
+    ['vs-provider','vs-base-url','vs-api-key','vs-model'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('vs-key-hint').textContent = 'No API key saved';
+    document.getElementById('vs-key-hint').style.color = '#666';
+    st.textContent = '✓ Vision settings cleared.';
+    st.style.color = '#888';
+    visionHasApiKey = false;
+    document.getElementById('vision-warning-text').textContent =
+      'Vision model not configured. Add an OpenAI-compatible provider in Vision Model Settings.';
+    document.getElementById('vision-warning').style.display = 'block';
+    loadVisionStatus();
+  }
+}
+
+// ── App settings ───────────────────────────────────────────────────────
+async function loadAppSettings() {
+  const data = await api('/api/app-settings');
+  if (data && data.ok) {
+    document.getElementById('app-url-input').value = data.app_url || '';
+    document.getElementById('app-cmd-input').value = data.dev_cmd || '';
+    document.getElementById('app-workspace-input').value = data.workspace || '';
+  }
+}
+
+async function saveAppSettings() {
+  const statusEl = document.getElementById('app-settings-status');
+  const app_url = document.getElementById('app-url-input').value.trim();
+  const dev_cmd = document.getElementById('app-cmd-input').value.trim();
+  const workspace = document.getElementById('app-workspace-input').value.trim();
+  
+  if (!app_url) {
+    statusEl.textContent = 'Error: App URL is required.';
+    statusEl.style.color = '#f44336';
+    return;
+  }
+  
+  const data = await api('/api/app-settings', 'POST', { app_url, dev_cmd, workspace });
+  if (data && data.ok) {
+    statusEl.textContent = 'Settings saved.';
+    statusEl.style.color = '#4caf50';
+    checkAppStatus(); // Refresh status with new URL
+  } else {
+    statusEl.textContent = data?.error || 'Failed to save settings.';
+    statusEl.style.color = '#f44336';
+  }
+}
+
+// ── App status ─────────────────────────────────────────────────────────
+async function checkAppStatus() {
+  const el = document.getElementById('app-status-text');
+  const msgEl = document.getElementById('app-status-message');
+  const data = await api('/api/app-status');
+  if (!data) { 
+    el.textContent = 'unknown'; 
+    el.style.color = '#555'; 
+    msgEl.style.display = 'none';
+    return; 
+  }
+  if (data.reachable) {
+    el.textContent = `running at ${data.url}`;
+    el.style.color = '#4caf50';
+    msgEl.style.display = 'none';
+  } else {
+    el.textContent = `not running at ${data.url}`;
+    el.style.color = '#f44336';
+    msgEl.textContent = 'Target app is not running. Start it first or update App URL / Start Command.';
+    msgEl.style.display = 'block';
+  }
+}
+
+async function startTargetApp() {
+  const el = document.getElementById('app-status-text');
+  const msgEl = document.getElementById('app-status-message');
+  el.textContent = 'starting…';
+  el.style.color = '#ffc107';
+  msgEl.style.display = 'none';
+  const data = await api('/api/start-app', 'POST');
+  if (!data) { 
+    el.textContent = 'no response'; 
+    el.style.color = '#f44336'; 
+    return; 
+  }
+  if (data.ok) {
+    el.textContent = data.already_running
+      ? `already running at ${data.url}`
+      : `starting (${data.message}) — checking in 8s…`;
+    el.style.color = '#ffc107';
+    if (!data.already_running) {
+      setTimeout(checkAppStatus, 8000);
+      setTimeout(checkAppStatus, 15000);
+    } else {
+      el.style.color = '#4caf50';
+      msgEl.style.display = 'none';
+    }
+  } else {
+    el.textContent = `Error: ${data.error || 'could not start app'}`;
+    el.style.color = '#f44336';
+  }
+}
+
+async function stopTargetApp() {
+  const el = document.getElementById('app-status-text');
+  const msgEl = document.getElementById('app-status-message');
+  el.textContent = 'stopping…';
+  el.style.color = '#ffc107';
+  const data = await api('/api/stop-app', 'POST');
+  if (data && data.ok) {
+    el.textContent = 'stopped';
+    el.style.color = '#888';
+    msgEl.textContent = 'Target app stopped.';
+    msgEl.style.display = 'block';
+  } else {
+    el.textContent = `Error: ${data?.error || 'could not stop app'}`;
+    el.style.color = '#f44336';
+  }
+}
+
+async function runValidation() {
+  const el = document.getElementById('app-status-text');
+  const data = await api('/api/run-validation', 'POST');
+  if (!data) return;
+  if (!data.ok) {
+    el.textContent = data.error || 'Validation blocked';
+    el.style.color = '#f44336';
+  }
+}
+
+// ── Coverage polling ───────────────────────────────────────────────────
+async function pollCoverage() {
+  const data = await api('/api/coverage');
+  if (!data || !data.ok) return;
+  document.getElementById('coverage-text').textContent =
+    data.percentage + '% (' + data.completed + '/' + data.total + ' requirements)';
+  document.getElementById('coverage-fill').style.width = data.percentage + '%';
+}
+
+// ── Init ───────────────────────────────────────────────────────────────
+let visionHasApiKey = false;
+connectWS();
+setInterval(pollState, 2000);
+setInterval(pollScreenshot, 4000);
+setInterval(pollTimeline, 5000);
+setInterval(pollCoverage, 15000);
+pollState();
+pollScreenshot();
+pollTimeline();
+pollCoverage();
+loadVisionSettings();   // also calls loadVisionStatus() internally
+loadVisionStatus();     // also call directly so debug bar populates even if settings call races
+loadAppSettings();      // load target app settings
+checkAppStatus();
+setInterval(checkAppStatus, 30000);
+setInterval(loadVisionStatus, 10000); // refresh debug bar every 10s (picks up test result changes)
+// Initialize mode UI from state on load
+(async () => {
+  const data = await api('/api/supervisor-mode');
+  if (data) { _currentMode = data.mode || 'human_review'; updateModeUI(_currentMode); }
+})();
+</script>
+</body>
+</html>

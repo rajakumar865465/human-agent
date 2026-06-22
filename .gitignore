@@ -1,0 +1,51 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Environment — never commit secrets
+.env
+
+# Claude Code internal config
+.claude/
+
+# Generated report files — keep folder structure, exclude generated content
+reports/logs/*.jsonl
+reports/logs/*.log
+reports/screenshots/live/*.png
+reports/screenshots/live/*.jpg
+reports/bug_reports/
+reports/visual_supervisor_state.json
+reports/final_report.json
+reports/final_report.md
+
+# Sandbox workspace
+sandbox/project_workspace/
+
+# Private vision / planning notes
+vison.txt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# pytest
+.pytest_cache/
+
+# Virtual environment variants
+venv/
+env/
+.env.local
+.env.*.local

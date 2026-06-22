@@ -1,0 +1,67 @@
+﻿project:
+  workspace_path: "./sandbox/demo_app"
+  app_url: "http://127.0.0.1:3000"
+  requirements_file: "./sandbox/demo_app/PROJECT_REQUIREMENTS.md"
+
+coding_agent:
+  type: "external"
+  provider: "claude_code"
+  command: "claude"
+  timeout_seconds: 120
+  fallback_to_files: true
+  max_fix_attempts: 3
+
+build:
+  install_command: "pip install -r requirements.txt"
+  build_command: ""
+  dev_command: "python -m uvicorn app:app --host 127.0.0.1 --port 3000"
+  test_command: ""
+  build_timeout_seconds: 600
+  test_timeout_seconds: 600
+  dev_timeout_seconds: 600
+  startup_wait_seconds: 20
+
+qa:
+  browser: "chromium"
+  headless: true
+  screenshot_on_failure: true
+  capture_console: true
+  capture_network: true
+  default_timeout_ms: 30000
+  api_base_path: "/api"
+
+permission_handler:
+  enabled: true
+  safe_buttons:
+    - "Allow"
+    - "Approve"
+    - "Continue"
+    - "Grant Access"
+    - "Yes"
+  blocked_keywords:
+    - "delete system"
+    - "format"
+    - "private key"
+    - "secret"
+    - "remove all files"
+  safe_command_prefixes:
+    - "pip install"
+    - "python"
+    - "pytest"
+    - "playwright"
+  blocked_command_patterns:
+    - "rm -rf"
+    - "del /s"
+    - "Remove-Item -Recurse"
+    - "shutdown"
+    - "format"
+    - "delete system"
+    - "private key"
+    - "secret"
+  log_path: "./reports/logs/permission_approvals.jsonl"
+
+reporting:
+  bug_report_dir: "./reports/bug_reports"
+  screenshot_dir: "./reports/screenshots"
+  log_dir: "./reports/logs"
+  final_report_path: "./reports/final_report.md"

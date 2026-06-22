@@ -1,0 +1,138 @@
+﻿project:
+  workspace_path: "./sandbox/demo_app"
+  app_url: "http://localhost:8000"
+  requirements_file: "./docs/PROJECT_REQUIREMENTS.md"
+
+coding_agent:
+  type: "external"
+  provider: "claude_code"
+  command: "claude"
+  timeout_seconds: 120
+  fallback_to_files: true
+  max_fix_attempts: 5
+
+build:
+  install_command: "pip install -r requirements.txt"
+  build_command: ""
+  dev_command: "uvicorn app:app --host 127.0.0.1 --port 8000 --reload"
+  test_command: ""
+  build_timeout_seconds: 600
+  test_timeout_seconds: 600
+  dev_timeout_seconds: 600
+  startup_wait_seconds: 8
+
+qa:
+  browser: "chromium"
+  headless: true
+  screenshot_on_failure: true
+  capture_console: true
+  capture_network: true
+  default_timeout_ms: 30000
+  api_base_path: "/api"
+
+permission_handler:
+  enabled: true
+  safe_buttons:
+    - "Allow"
+    - "Approve"
+    - "Continue"
+    - "Grant Access"
+    - "Yes"
+  blocked_keywords:
+    - "delete system"
+    - "format"
+    - "private key"
+    - "secret"
+    - "remove all files"
+  safe_command_prefixes:
+    - "npm install"
+    - "npm run build"
+    - "npm run dev"
+    - "npm test"
+    - "python"
+    - "pytest"
+    - "playwright"
+  blocked_command_patterns:
+    - "rm -rf"
+    - "del /s"
+    - "Remove-Item -Recurse"
+    - "shutdown"
+    - "format"
+    - "delete system"
+    - "private key"
+    - "secret"
+  log_path: "./reports/logs/permission_actions.log"
+
+reporting:
+  bug_report_dir: "./reports/bug_reports"
+  screenshot_dir: "./reports/screenshots"
+  log_dir: "./reports/logs"
+  final_report_path: "./reports/final_report.md"
+
+visual_supervisor:
+  enabled: true
+  supervisor_mode: "human_review"          # observe_only | human_review | auto_fix
+  capture_interval_seconds: 3
+  max_loop_minutes: 120
+  auto_click_safe_permissions: true
+  auto_type_prompts: false                 # default safe — never auto-type prompts
+  require_human_approval_before_prompt: true
+  prompt_only_after_completion_claim: true
+  disable_same_screen_prompting: true      # same-screen NEVER triggers auto-type
+  require_human_for_risky_actions: true
+  verify_completion_before_next_task: true
+  continue_to_next_requirement_after_pass: true
+  max_same_screen_repeats: 5
+  min_seconds_between_prompts: 120
+  max_prompts_per_task: 1
+  require_new_screen_state_before_prompt: true
+  state_file: "./reports/visual_supervisor_state.json"
+  timeline_log: "./reports/logs/visual_supervisor_timeline.jsonl"
+
+screen_vision:
+  screenshot_dir: "./reports/screenshots/live"
+  latest_screenshot_path: "./reports/screenshots/live/current_screen.png"
+  vision_model: "gpt-4.1"
+  analyze_active_window_only: false
+
+ui_action:
+  click_delay_seconds: 0.5
+  typing_interval_seconds: 0.01
+  safe_button_texts:
+    - "Allow"
+    - "Approve"
+    - "Continue"
+    - "Grant Access"
+    - "Yes"
+  blocked_button_texts:
+    - "Delete"
+    - "Remove"
+    - "Destroy"
+    - "Format"
+    - "Reset"
+    - "Upload Secrets"
+  action_log: "./reports/logs/ui_actions.jsonl"
+
+coding_agent_ui:
+  input_detection_mode: "vision"
+  prompt_submit_key: "enter"
+  focus_before_typing: true
+
+safety:
+  require_human_review_for_risky_actions: true
+  never_click_keywords:
+    - "Delete"
+    - "Remove"
+    - "Destroy"
+    - "Format"
+    - "Reset"
+    - "Upload Secrets"
+    - "Private Key"
+    - "API Key"
+    - "rm -rf"
+    - "del /s"
+    - "delete system"
+    - "format disk"
+    - "expose secrets"
+    - "remove project"
+    - "delete folder"

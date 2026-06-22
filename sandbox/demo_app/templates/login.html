@@ -1,0 +1,29 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - TaskFlow Lite</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #eef2ff; color: #1f2937; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+    .card { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 12px 30px rgba(15,23,42,.08); }
+    input { width: 100%; margin: 10px 0 16px; padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 12px; }
+    button { border: 0; border-radius: 999px; padding: 14px 20px; background: #7c3aed; color: white; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Login</h1>
+      <form method="get" action="/login">
+        <label>Email</label>
+        <input name="email" type="email" placeholder="demo@example.com">
+        <label>Password</label>
+        <input name="password" type="password" placeholder="password">
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
